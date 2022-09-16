@@ -135,3 +135,13 @@ as well as my implementation
       Year = {2020}
 }
 ```
+
+
+## MODIFICATIONS for GraspFlow
+
+1. yaml within utils is outdated
+2. The method tested with following installation (python 3.8, pytorch 1.12.1)
+
+``
+conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
+``
