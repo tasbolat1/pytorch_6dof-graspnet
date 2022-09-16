@@ -145,3 +145,5 @@ as well as my implementation
 ``
 conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
 ``
+
+3. Other packages can be easily installed using either pip install or conda, including Pointnet2_Pytorch version.
