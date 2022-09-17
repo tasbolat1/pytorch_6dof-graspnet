@@ -147,3 +147,8 @@ conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
 ``
 
 3. Other packages can be easily installed using either pip install or conda, including Pointnet2_Pytorch version.
+
+## Usage for GraspFlow
+
+Always actiavet conda env. For local please activate ``graspnet_conda``.
+
