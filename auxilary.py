@@ -110,7 +110,6 @@ def read_pc(cat, id):
         pcs = data['pcs'] # pcs in world frame, size 1000
         camera_poses = data["camera_poses"] # Camera pose in world frame
 
-    # TODO: map to camera frame to get better grasps?
     pcs_camera = []
     for pc, camera_pose in zip(pcs, camera_poses):
         trimesh_pc = trimesh.points.PointCloud(pc)
@@ -165,3 +164,16 @@ def gripper_bd(quality=None):
     small_gripper = trimesh.path.util.concatenate([small_gripper_main_part,
                                     small_gripper_handle_part])
     return small_gripper
+
+
+def compensate_camera_frame(transforms, standoff = 0.2):
+    # this is ad-hoc
+    # TODO: check
+
+    new_transforms = transforms.copy()
+    for i, transform in enumerate(transforms):
+        standoff_mat = np.eye(4)
+        standoff_mat[2] = -standoff
+        
+        new_transforms[i, :3, 3] = np.matmul(transform,standoff_mat)[:3,3]
+    return new_transforms

@@ -44,10 +44,9 @@ def make_parser():
     parser.add_argument('--batch_size', type=int, default=60,
         help="Set the batch size of the number of grasps we want to process and can fit into the GPU memory at each forward pass. The batch_size can be increased for a GPU with more memory."
     )
+    parser.add_argument('--save_dir', help='directory to save the generated grasps.', default='temp')
     # parser.add_argument('--train_data', action='store_true')
     return parser
-
-
 
 def main(args):
     parser = make_parser()
@@ -59,6 +58,9 @@ def main(args):
     grasp_evaluator_args.generate_dense_grasps = False
     args.choose_fn = 'all'
     args.generate_dense_grasps = False
+
+    print(f'Working with {args.cat}{args.idx:003} to generate {args.num_grasp_samples} samples ...')
+
     estimator = grasp_estimator.GraspEstimator(grasp_sampler_args, grasp_evaluator_args, args)
 
     # load the pointclouds
@@ -66,6 +68,7 @@ def main(args):
 
 
     # the following functions returns all sequence (incl. refined traj.), so use last grasps.
+    start_time = time.time()
     generated_grasps, generated_scores = estimator.generate_and_refine_grasps(pc)
     generated_grasps = generated_grasps[-args.num_grasp_samples:]
     generated_scores = generated_scores[-args.num_grasp_samples:]
@@ -81,10 +84,16 @@ def main(args):
     all_grasps = np.array(generated_grasps)
     all_scores = np.array(generated_scores)
     
+    time_to_generate = time.time()-start_time
+
     for i in range(len(all_grasps)):
         grasp = all_grasps[i]
         grasp_tran = np.matmul(np.linalg.inv(camera_pose.T), grasp)
         all_grasps[i] = grasp_tran
+
+
+    # TODO: map grasps to camera frame (ad-hoc) stuff
+    all_grasps = compensate_camera_frame(all_grasps, standoff=0.03)
     
     translations = all_grasps[:,:3,3]
     quaternions = R.from_matrix(all_grasps[:,:3,:3]).as_quat()
@@ -94,29 +103,22 @@ def main(args):
         scene = trimesh.scene.Scene()
         scene.add_geometry(pc_mesh)
         for i, (grasp, score) in enumerate(zip(all_grasps, all_scores)):
-            print(score)
-            print(grasp)
             scene.add_geometry( gripper_bd(score), transform = grasp)
         scene.show()
         
-    # save_path = f'../grasps_generated_graspnet_5second/'
-    # Path(save_path).mkdir(parents=True, exist_ok=True)
+    Path(args.save_dir).mkdir(parents=True, exist_ok=True)
 
-    # # save results
-    # _f_dir = f'{save_path}/{args.cat}{args.idx:03}'
-    # # if 'heuristics' in args:
-    # #     _f_dir = f'{save_path}/grasps_heuristics'
+    np.savez(f'{args.save_dir}/{args.cat}{args.idx:03}',
+                 obj_pose_relative = obj_pose_relative,
+                 translations = translations,
+                 quaternions = quaternions,
+                 graspnet_scores = all_scores,
+                 graspnet_time = time_to_generate)
 
-    # print(translations.shape)
-    # np.savez(_f_dir,
-    #              obj_pose_relative = obj_pose_relative,
-    #              translations = translations,
-    #              quaternions = quaternions,
-    #              graspnet_scores = all_scores)
+    with open(f'{args.save_dir}/{args.cat}{args.idx:03}_args.pkl', 'wb') as f:
+        pickle.dump(args, f)
 
-    # pickle.dump(my_pcs, open(f'{save_path}/pcs.pkl', 'wb'))
-
-    print('Done')
+    print(f'Generation completed successfully in {time_to_generate} seconds.')
 
 
 if __name__ == '__main__':
