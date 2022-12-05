@@ -56,7 +56,9 @@ class GraspEstimator:
         pc,
     ):
         pc_list, pc_mean = self.prepare_pc(pc)
+        tic = time.time()
         grasps_list, confidence_list, z_list = self.generate_grasps(pc_list)
+        sampling_time = time.time() - tic
         inlier_indices = utils.get_inlier_grasp_indices(grasps_list,
                                                         torch.zeros(1, 3).to(
                                                             self.device),
@@ -87,7 +89,7 @@ class GraspEstimator:
         refine_indexes, sample_indexes = np.where(selection_mask)
         success_prob = improved_success[refine_indexes,
                                         sample_indexes].tolist()
-        return grasps, success_prob
+        return grasps, success_prob, sampling_time
 
     def prepare_pc(self, pc):
         if pc.shape[0] > self.target_pc_size:
@@ -175,7 +177,7 @@ class GraspEstimator:
         norm_t = torch.norm(delta_t, p=2, dim=-1).to(self.device)
         # Adjust the alpha so that it won't update more than 1 cm. Gradient is only valid
         # in small neighborhood.
-        alpha = torch.min(0.01 / norm_t, torch.tensor(1.0).to(self.device))
+        alpha = torch.min(0.0001 / norm_t, torch.tensor(1.0).to(self.device))
         grasp_trans.data += grasp_trans.grad * alpha[:, None]
         temp = grasp_eulers.clone()
         grasp_eulers.data += grasp_eulers.grad * alpha[:, None]

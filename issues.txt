@@ -1,0 +1,7 @@
+1. Existing issues:
+    - Not reachable grasps for environments. Example mug 008
+
+
+Existing problems.
+1. Graspnet seems to sample nicely
+2. GPD is on the way
