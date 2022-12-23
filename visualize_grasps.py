@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument("--cat", type=str, help="Choose simulation obj name.", choices=objs, default='box' )
 parser.add_argument("--idx", type=int, help="Choose obj id.", default=1)
 parser.add_argument("--sampler", type=str, help="Choose sampler.", choices=['graspnet', 'gpd'], default='graspnet')
-parser.add_argument("--classifier", type=str, help="Choose classifier.", choices=['N', 'Sminus', 'S', 'SE', 'E'], default='N')
+parser.add_argument("--classifier", type=str, help="Choose classifier.", choices=['N', 'Sminus', 'S', 'SE', 'E', 'ST', 'STE', 'SET'], default='N')
 parser.add_argument("--method", type=str, help="Choose refine method.", choices=['N', 'graspnet', 'GraspFlow', 'metropolis'], default='N')
 parser.add_argument("--data_dir", type=str, help="data directory to npz files.", default='../experiments/generated_grasps')
 parser.add_argument("--grasp_space", type=str, help=".", choices=['Euler', 'SO3', 'Theta', 'N'], default='N', )
@@ -30,7 +30,7 @@ sampler=args.sampler # graspnet, gpd
 classifier = args.classifier # N, Sminus, S, SE, E
 refineMethod = args.method # N, graspnet, GraspFlow, MH
 which_env = 0
-which_trial = 0
+which_trial = 7
 
 # def get_rot_matrix(t1,q1):
 #     view_rot_matrix = np.eye(4)
@@ -64,6 +64,7 @@ obj_mesh = load_mesh(cat, idx)
 obj_mesh.visual.face_colors = [128,128,128,128]
 obj_transform = get_rot_matrix(obj_stable_t[which_env], obj_stable_q[which_env])
 
+print(f'obj_transform = {obj_transform}')
 
 # visualize the pointclouds inorld frame
 print('VISUALIZING SAMPLED GRASPS ... ')
@@ -77,10 +78,11 @@ scene.add_geometry( center_box_mesh )
 
 
 for i, (g, s) in enumerate(zip(grasps, scores)):
-    if i != which_trial:
-        continue
-    print(ts[which_env][i])
-    print(qs[which_env][i])
+    # if i != which_trial:
+    #     continue
+    # print(ts[which_env][i])
+    # print(qs[which_env][i])
+    # print(s)
     scene.add_geometry( gripper_bd(s), transform = g)
     panda_gripper = PandaGripper(root_folder='/home/tasbolat/some_python_examples/graspflow_models/grasper')
     panda_gripper.apply_transformation(transform=g)
@@ -88,8 +90,8 @@ for i, (g, s) in enumerate(zip(grasps, scores)):
         _mesh.visual.face_colors = [125,125,125,80]
         scene.add_geometry(_mesh)
 
-    if i == which_trial:
-        break
+    # if i == which_trial:
+    #     break
         
 scene.show()
 

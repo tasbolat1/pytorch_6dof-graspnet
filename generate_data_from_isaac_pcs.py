@@ -304,7 +304,6 @@ def main(args):
             graspnet_N_N_N_theta_pre = total_sampled_theta_pre,
             graspnet_N_N_N_time = total_sampled_time,
 
-
             graspnet_Sminus_graspnet_Euler_grasps_translations = total_refined_grasps_translations,
             graspnet_Sminus_graspnet_Euler_grasps_quaternions = total_refined_grasps_quaternions,
             graspnet_Sminus_graspnet_Euler_scores = total_refined_scores,
@@ -324,53 +323,53 @@ def main(args):
 
     ################## VISUALIZE ####################################
      
-    which_env = 0
-    # which_trial = 0
-    pc_mesh = trimesh.points.PointCloud(all_pc_world[which_env])
-    obj_mesh.visual.face_colors = [128,128,128,128]
-    obj_transform = get_rot_matrix(obj_stable_t[which_env], obj_stable_q[which_env])
+    # which_env = 0
+    # # which_trial = 0
+    # pc_mesh = trimesh.points.PointCloud(all_pc_world[which_env])
+    # obj_mesh.visual.face_colors = [128,128,128,128]
+    # obj_transform = get_rot_matrix(obj_stable_t[which_env], obj_stable_q[which_env])
 
-    _box_mesh = trimesh.primitives.Box(extents=[0.03,0.03,0.03])
+    # _box_mesh = trimesh.primitives.Box(extents=[0.03,0.03,0.03])
 
-    # visualize the pointclouds inorld frame
-    print('VISUALIZING SAMPLED GRASPS ... ')
-    if args.visualize:
+    # # visualize the pointclouds inorld frame
+    # print('VISUALIZING SAMPLED GRASPS ... ')
+    # if args.visualize:
 
 
-        scene = trimesh.Scene()
+    #     scene = trimesh.Scene()
         
-        scene.add_geometry(pc_mesh)
+    #     scene.add_geometry(pc_mesh)
         
-        scene.add_geometry(obj_mesh, transform=obj_transform)
-        scene.add_geometry( _box_mesh )
-        for i, (grasp, score) in enumerate(zip(total_sampled_grasps[which_env], total_sampled_scores[which_env])):
+    #     scene.add_geometry(obj_mesh, transform=obj_transform)
+    #     scene.add_geometry( _box_mesh )
+    #     for i, (grasp, score) in enumerate(zip(total_sampled_grasps[which_env], total_sampled_scores[which_env])):
 
-            scene.add_geometry( gripper_bd(score), transform = grasp)
-            # panda_gripper = PandaGripper(root_folder='/home/tasbolat/some_python_examples/graspflow_models/grasper')
-            # panda_gripper.apply_transformation(transform=grasp)
-            # for _mesh in panda_gripper.get_meshes():
-            #     _mesh.visual.face_colors = [125,125,125,80]
-            #     scene.add_geometry(_mesh)
+    #         scene.add_geometry( gripper_bd(score), transform = grasp)
+    #         # panda_gripper = PandaGripper(root_folder='/home/tasbolat/some_python_examples/graspflow_models/grasper')
+    #         # panda_gripper.apply_transformation(transform=grasp)
+    #         # for _mesh in panda_gripper.get_meshes():
+    #         #     _mesh.visual.face_colors = [125,125,125,80]
+    #         #     scene.add_geometry(_mesh)
             
-        scene.show()
+    #     scene.show()
 
-    print('VISUALIZING REFINED GRASPS ... ')
-    if args.visualize:
+    # print('VISUALIZING REFINED GRASPS ... ')
+    # if args.visualize:
 
 
-        scene = trimesh.Scene()
-        scene.add_geometry(pc_mesh)
-        scene.add_geometry(obj_mesh, transform=obj_transform)
-        scene.add_geometry( _box_mesh )
-        for i, (grasp, score) in enumerate(zip(total_refined_grasps[which_env], total_refined_scores[which_env])):
-            scene.add_geometry( gripper_bd(score), transform = grasp)
-            # panda_gripper = PandaGripper(root_folder='/home/tasbolat/some_python_examples/graspflow_models/grasper')
-            # panda_gripper.apply_transformation(transform=grasp)
-            # for _mesh in panda_gripper.get_meshes():
-            #     _mesh.visual.face_colors = [125,125,125,80]
-            #     scene.add_geometry(_mesh)
+    #     scene = trimesh.Scene()
+    #     scene.add_geometry(pc_mesh)
+    #     scene.add_geometry(obj_mesh, transform=obj_transform)
+    #     scene.add_geometry( _box_mesh )
+    #     for i, (grasp, score) in enumerate(zip(total_refined_grasps[which_env], total_refined_scores[which_env])):
+    #         scene.add_geometry( gripper_bd(score), transform = grasp)
+    #         # panda_gripper = PandaGripper(root_folder='/home/tasbolat/some_python_examples/graspflow_models/grasper')
+    #         # panda_gripper.apply_transformation(transform=grasp)
+    #         # for _mesh in panda_gripper.get_meshes():
+    #         #     _mesh.visual.face_colors = [125,125,125,80]
+    #         #     scene.add_geometry(_mesh)
             
-        scene.show()
+    #     scene.show()
 
 
 if __name__ == '__main__':
