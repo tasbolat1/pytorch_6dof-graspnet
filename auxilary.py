@@ -292,6 +292,8 @@ def parse_isaac_data(cat, idx, data_dir):
     all_pc_world = np.zeros([num_of_env, NUM_POINTS, 3])
     all_pc1 = np.zeros([num_of_env, NUM_POINTS, 3])
 
+    all_pc_world_raw = []
+
     view_rotmat_pre = get_rot_matrix(np.array([0,0,0]), R.from_euler('zyx', [0, np.pi/2, -np.pi/2]).as_quat())
 
     for i in range(num_of_env):    
@@ -317,14 +319,21 @@ def parse_isaac_data(cat, idx, data_dir):
         pc3_world = np.matmul(view3[i], pc3_world.T).T 
 
         pc_world = np.concatenate([pc0_world, pc1_world, pc2_world, pc3_world], axis=0)
+        all_pc_world_raw.append(pc_world)
         pc_world = regularize_pc_point_count(pc=pc_world[:,:3], npoints=NUM_POINTS)
-
         all_pc_world[i, :] = pc_world
 
         all_pc1[i, :] = regularize_pc_point_count(pc=pc1, npoints=NUM_POINTS)
 
 
-    return all_pc1, all_pc_world, obj_stable_t, obj_stable_q, obj_t, obj_q, view1, view_rotmat_pre, isaac_seed
+    return all_pc1, all_pc_world, all_pc_world_raw, obj_stable_t, obj_stable_q, obj_t, obj_q, view1, view_rotmat_pre, isaac_seed
+
+def save_raw_pc(fname, pcs_raw):
+    data = {}
+    for i in range(len(pcs_raw)):
+        data[str(i)] = pcs_raw[i]
+    np.savez(fname, **data)
+    
 
 def compensate_camera_frame(transforms, standoff = 0.2):
     # this is ad-hoc

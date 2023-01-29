@@ -5,11 +5,7 @@ import numpy as np
 import argparse
 import grasp_estimator
 import sys
-# import os
-# import glob
-# import mayavi.mlab as mlab
-# from utils.visualization_utils import *
-import mayavi.mlab as mlab
+
 from utils import utils
 import pickle
 import trimesh
@@ -20,6 +16,7 @@ from auxilary import *
 import json
 import torch
 import tqdm.auto as tqdm
+import complex_environment_utils
 
 np.random.seed(42)
 torch.manual_seed(42)
@@ -33,8 +30,8 @@ python generate_data_from_isaac_pcs.py --cat box --idx 14 --n 20   --refinement_
 '''
 
 # PARAMETERS TO TUNE
-TOP_DOWN_PHI = 60 # angle between grasp vector and plane on xy. [degrees]
-TABLE_HEIGHT = 0.20 # table height to specify z threshold on grasps. [cm]
+TOP_DOWN_PHI = 180 # angle between grasp vector and plane on xy. [degrees] # 60
+TABLE_HEIGHT = 0.10 # table height to specify z threshold on grasps. [cm] # 0.2
 IK_Q7_ITERATIONS = 30 # q7 angle iterations for checking IK solver [unitless], higher is better
 
 
@@ -66,24 +63,14 @@ def make_parser():
         help="Set the batch size of the number of grasps we want to process and can fit into the GPU memory at each forward pass. The batch_size can be increased for a GPU with more memory."
     )
     parser.add_argument('--save_dir', type=str, help='directory to save the generated grasps.', default='../experiments/generated_grasps')
+    parser.add_argument('--experiment_type', type=str, help='define experiment type for isaac. Ex: complex, single', default='single', choices=['single', 'complex'])
     return parser
 
 
+def map2world(grasps, camera_view, view_rotmat_pre=None):
 
-# def load_mesh(cat, idx):
-#     # load an object
-#     if cat in ['box', 'cylinder']:
-#         mesh = trimesh.load(f'/home/tasbolat/some_python_examples/graspflow_models/grasper/grasp_data/meshes/{cat}/{cat}{idx:003}.stl')
-#     else:
-#         mesh = trimesh.load(f'/home/tasbolat/some_python_examples/graspflow_models/grasper/grasp_data/meshes/{cat}/{cat}{idx:003}.obj', force='mesh')
-
-#     info = json.load(open(f'/home/tasbolat/some_python_examples/graspflow_models/grasper/grasp_data/info/{cat}/{cat}{idx:003}.json'))
-
-#     mesh.apply_scale(info['scale'])
-
-#     return mesh
-
-def map2world(grasps, camera_view, view_rotmat_pre):
+        if view_rotmat_pre is None:
+            view_rotmat_pre = get_rot_matrix(np.array([0,0,0]), R.from_euler('zyx', [0, np.pi/2, -np.pi/2]).as_quat())
 
         grasps_transforms = np.einsum('ai,Nib -> Nab', view_rotmat_pre, grasps)
         # grasp_tran = np.matmul(view_rotmat_pre, grasp)
@@ -108,38 +95,30 @@ def main(args):
     
     # parse isaac data
     print(f'Working with {args.cat}{args.idx:003} to generate {args.num_grasp_samples} samples ...')
-    all_pc1, all_pc_world, obj_stable_t, obj_stable_q, obj_t, obj_q, view1, view_rotmat_pre, isaac_seed = parse_isaac_data(args.cat, args.idx, data_dir='/home/tasbolat/some_python_examples/graspflow_models/experiments/pointclouds')
-    
+
+    if args.experiment_type == 'single':
+        all_pc1, all_pc_world, all_pc_world_raw, obj_stable_t, obj_stable_q, obj_t, obj_q, view1, view_rotmat_pre, isaac_seed = parse_isaac_data(args.cat, args.idx, data_dir='/home/tasbolat/some_python_examples/graspflow_models/experiments/pointclouds')
+    elif args.experiment_type == 'complex':
+        # NOTE:currently works only for one environment since we design this experiment so
+        pc, pc_env, obj_stable_t, obj_stable_q, pc1, pc1_view, isaac_seed = complex_environment_utils.parse_isaac_complex_data(path_to_npz='../experiments/pointclouds/shelf001.npz',
+                                                            cat=args.cat, idx=args.idx, env_num=0,
+                                                            filter_epsion=1.0)
+        all_pc_world = np.expand_dims( regularize_pc_point_count(pc, npoints=1024), axis=0)
+        view1 = np.expand_dims(pc1_view, axis=0)
+        all_pc1 = np.expand_dims(pc1, axis=0)
+        obj_stable_t = np.expand_dims(obj_stable_t, axis=0)
+        obj_stable_q = np.expand_dims(obj_stable_q, axis=0)
+        view_rotmat_pre = None
+        all_pc_world_raw = np.expand_dims(pc, axis=0)
+
+
+
     num_unique_pcs = all_pc1.shape[0] # corresponds to num_env in isaac
     print(f'num_unique_pcs shape = {num_unique_pcs}')
-
-    obj_mesh = load_mesh(args.cat, args.idx)
 
     # prepare to sample
     estimator = grasp_estimator.GraspEstimator(grasp_sampler_args, grasp_evaluator_args, args)
 
-#     
-
-# # #     # # load the pointclouds
-#     pc, obj_pose_relative, camera_pose = read_pc(args.cat, args.idx)
-#     print(pc.shape)
-#     print(obj_pose_relative)
-
-# #     # the following functions returns all sequence (incl. refined traj.), so use last grasps.
-# #     start_time = time.time()
-#     print(args.batch_size)
-#     generated_grasps, generated_scores = estimator.generate_and_refine_grasps(pc)
-#     print(len(generated_grasps))
-#     # print(generated_grasps[0])
-#     # print(generated_grasps[300])
-#     # generated_grasps = generated_grasps[-args.num_grasp_samples:]
-#     # generated_scores = generated_scores[-args.num_grasp_samples:]
-
-#     # print 
-
-    # print('-----------------------------------------------------------------------------')
-
-    
     total_refined_grasps_translations = np.zeros([num_unique_pcs, args.num_grasp_samples, 3])
     total_refined_grasps_quaternions =  np.zeros([num_unique_pcs, args.num_grasp_samples, 4])
     total_refined_grasps = np.zeros([num_unique_pcs, args.num_grasp_samples, 4,4])
@@ -228,8 +207,8 @@ def main(args):
                 continue
 
             # add transform to the grasps
-            sampled_grasps = compensate_camera_frame(sampled_grasps, standoff=0.03)
-            refined_grasps = compensate_camera_frame(refined_grasps, standoff=0.015)
+            sampled_grasps = compensate_camera_frame(sampled_grasps, standoff=0.035) # 0.03
+            refined_grasps = compensate_camera_frame(refined_grasps, standoff=0.020) # 0.015
             
             # filter out grasps that not reachable
             refined_theta, refined_theta_pre = panda_robot.solve_ik_batch2(refined_grasps)
@@ -312,65 +291,15 @@ def main(args):
             graspnet_Sminus_graspnet_Euler_time = total_refined_time,
 
             pc = all_pc_world,
-            obj_translations =  obj_t,
-            obj_quaternions = obj_q,
+            # obj_translations =  obj_t,
+            # obj_quaternions = obj_q,
             obj_stable_translations =  obj_stable_t,
             obj_stable_quaternions = obj_stable_q,
             seed = isaac_seed
     )
 
-
-
-    ################## VISUALIZE ####################################
-     
-    # which_env = 0
-    # # which_trial = 0
-    # pc_mesh = trimesh.points.PointCloud(all_pc_world[which_env])
-    # obj_mesh.visual.face_colors = [128,128,128,128]
-    # obj_transform = get_rot_matrix(obj_stable_t[which_env], obj_stable_q[which_env])
-
-    # _box_mesh = trimesh.primitives.Box(extents=[0.03,0.03,0.03])
-
-    # # visualize the pointclouds inorld frame
-    # print('VISUALIZING SAMPLED GRASPS ... ')
-    # if args.visualize:
-
-
-    #     scene = trimesh.Scene()
-        
-    #     scene.add_geometry(pc_mesh)
-        
-    #     scene.add_geometry(obj_mesh, transform=obj_transform)
-    #     scene.add_geometry( _box_mesh )
-    #     for i, (grasp, score) in enumerate(zip(total_sampled_grasps[which_env], total_sampled_scores[which_env])):
-
-    #         scene.add_geometry( gripper_bd(score), transform = grasp)
-    #         # panda_gripper = PandaGripper(root_folder='/home/tasbolat/some_python_examples/graspflow_models/grasper')
-    #         # panda_gripper.apply_transformation(transform=grasp)
-    #         # for _mesh in panda_gripper.get_meshes():
-    #         #     _mesh.visual.face_colors = [125,125,125,80]
-    #         #     scene.add_geometry(_mesh)
-            
-    #     scene.show()
-
-    # print('VISUALIZING REFINED GRASPS ... ')
-    # if args.visualize:
-
-
-    #     scene = trimesh.Scene()
-    #     scene.add_geometry(pc_mesh)
-    #     scene.add_geometry(obj_mesh, transform=obj_transform)
-    #     scene.add_geometry( _box_mesh )
-    #     for i, (grasp, score) in enumerate(zip(total_refined_grasps[which_env], total_refined_scores[which_env])):
-    #         scene.add_geometry( gripper_bd(score), transform = grasp)
-    #         # panda_gripper = PandaGripper(root_folder='/home/tasbolat/some_python_examples/graspflow_models/grasper')
-    #         # panda_gripper.apply_transformation(transform=grasp)
-    #         # for _mesh in panda_gripper.get_meshes():
-    #         #     _mesh.visual.face_colors = [125,125,125,80]
-    #         #     scene.add_geometry(_mesh)
-            
-    #     scene.show()
-
+    # save raw pointclouds in world frame. Note: these points are not regularized
+    save_raw_pc(f'{args.save_dir}/{args.cat}{args.idx:003}_pc', all_pc_world_raw)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
