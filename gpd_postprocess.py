@@ -9,6 +9,7 @@ import trimesh
 from numpy import genfromtxt
 from robot_ik_model import RobotModel
 import tqdm.auto as tqdm
+import complex_environment_utils
 
 '''
 RUN as:
@@ -99,7 +100,16 @@ def gpd2grasps(rotations, translations):
 # grasps_file = f'{args.grasp_folder}/{cat}{idx:003}.npz'
 # data = np.load(grasps_file)
 
-all_pc1, all_pc_world, obj_stable_t, obj_stable_q, obj_t, obj_q, view1, view_rotmat_pre, isaac_seed = parse_isaac_data(args.cat, args.idx, data_dir='/home/tasbolat/some_python_examples/graspflow_models/experiments/pointclouds')
+if args.experiment_type == 'single':
+    all_pc1, all_pc_world, obj_stable_t, obj_stable_q, obj_t, obj_q, view1, view_rotmat_pre, isaac_seed = parse_isaac_data(args.cat, args.idx, data_dir='/home/tasbolat/some_python_examples/graspflow_models/experiments/pointclouds')
+elif args.experiment_type == 'complex':
+    pc, pc_env, obj_stable_t, obj_stable_q, pc1, pc1_view, isaac_seed = complex_environment_utils.parse_isaac_complex_data(path_to_npz='../experiments/pointclouds/shelf001.npz',
+                                                            cat=args.cat, idx=args.idx, env_num=0,
+                                                            filter_epsion=1.0)
+    all_pc_world = np.expand_dims(pc, axis=0)
+    obj_t = None
+    obj_q = None
+
 grasps_dir = f'{args.gpd_raw_grasp_folder}/{cat}'
 
 all_grasps_translations = []
@@ -181,8 +191,8 @@ np.savez(f'{args.grasp_folder}/{args.cat}{args.idx:003}_gpd',
         gpd_N_N_N_time = all_time,
 
         pc = all_pc_world,
-        obj_translations =  obj_t,
-        obj_quaternions = obj_q,
+        # obj_translations =  obj_t,
+        # obj_quaternions = obj_q,
         obj_stable_translations =  obj_stable_t,
         obj_stable_quaternions = obj_stable_q,
         seed = isaac_seed
