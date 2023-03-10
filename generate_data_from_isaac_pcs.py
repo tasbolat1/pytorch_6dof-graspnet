@@ -45,8 +45,8 @@ def make_parser():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--grasp_sampler_folder', type=str, default='checkpoints/gan_pretrained/')
     parser.add_argument('--grasp_evaluator_folder', type=str, default='checkpoints/evaluator_pretrained/')
-    parser.add_argument('--refinement_method', choices={"gradient", "sampling"}, default='sampling')
-    parser.add_argument('--refine_steps', type=int, default=1) # set it one for just sampling
+    parser.add_argument('--refinement_method', choices={"gradient", "sampling"}, default='gradient')
+    parser.add_argument('--refine_steps', type=int, default=2) # set it one for just sampling
     parser.add_argument("--cat", type=str, help="Choose simulation obj name.", choices=objs, default='box' )
     parser.add_argument("--idx", type=int, help="Choose obj id.", default=1)
     parser.add_argument('--visualize', action='store_true', help='If set, visualizes the grasps', default=False)

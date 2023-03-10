@@ -8,3 +8,4 @@ renderer/__pycache__/
 utils/__pycache__/
 __pycache__/
 temp/
+franka_ik_pybind.cpython-39-x86_64-linux-gnu.so
