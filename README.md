@@ -137,7 +137,7 @@ as well as my implementation
 ```
 
 
-## MODIFICATIONS for GraspFlow
+## MODIFICATIONS for GraspFlow and GoES
 
 1. yaml within utils is outdated
 2. The method tested with following installation (python 3.8, pytorch 1.12.1)
@@ -148,7 +148,11 @@ conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
 
 3. Other packages can be easily installed using either pip install or conda, including Pointnet2_Pytorch version.
 
-## Usage for GraspFlow
+## Usage for GraspFlow and GoES
 
-Always actiavet conda env. For local please activate ``graspnet_conda``.
+Use the following command to generate candidate grasps
+```
+python generate_data_from_isaac_pcs.py --cat <cat> --idx <idx> --n 20 --cfg ../cfg/graspopt_isaac_params.yaml
+```
 
+all parameters and their explanations can be found under settings.md
